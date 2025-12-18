@@ -1,0 +1,19 @@
+stories42M.pt
+
+# Pythonのキャッシュファイル
+__pycache__/
+*.py[cod]
+
+# 仮想環境（もしプロジェクト内に作っている場合）
+venv/
+.venv/
+env/
+
+# 機械学習のチェックポイントや重みファイル（拡張子でまとめて指定）
+*.pt
+*.pth
+*.bin
+*.model
+
+# OSが生成する一時ファイル
+.DS_Store
