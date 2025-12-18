@@ -1,0 +1,28 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyd
+*.so
+
+# Environments
+venv/
+.venv/
+env/
+.env
+
+# Editor files
+.vscode/
+.idea/
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# Large Model / Data files
+stories42M.pt
+data/*.txt.idx
+data/*.txt.dat
+data/*.bin
+
+# Assignment Output files
+*.txt

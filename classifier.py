@@ -55,6 +55,13 @@ class LlamaEmbeddingClassifier(torch.nn.Module):
 		3) Take the log-softmax of the logits and return log-probabilities over all classes.
 		'''
 		hidden_states, _ = self.llama(input_ids) # hidden_stateはBSD想定
+		pad_id = self.llama.config.pad_token_id
+		attention_mask = (input_ids != pad_id).int()
+		sequence_lengths = attention_mask.sum(dim=1) - 1
+
+		batch_indices = torch.arange(input_ids.shape[0], device=input_ids.device)
+
+		
 		final_hidden_state = hidden_states[:, -1, :] #どうやって前処理しました？？
 		dropped_hidden_state = self.dropout(final_hidden_state)
 		logits = self.classifier_head(dropped_hidden_state)
