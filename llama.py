@@ -103,7 +103,9 @@ class Attention(nn.Module):
             attn = self.attn_dropout(attn)
             return torch.matmul(attn, value)
 
-        q64, k64, v64 = query.double(), key.double(), value.double()
+        # q64, k64, v64 = query.double(), key.double(), value.double()
+
+        q64, k64, v64 = query, key, value # mpsの仕様で32で行きます！！
         scale = 1.0 / math.sqrt(q64.size(-1))
         scores = torch.matmul(q64, k64.transpose(-2, -1)) * scale
         attn = F.softmax(scores, dim=-1)
@@ -271,8 +273,8 @@ class Llama(LlamaPreTrainedModel):
             if torch.is_grad_enabled():
                 logits = self.output(h_last)
             else:
-                logits = F.linear(h_last.double(), self.output.weight.double()).to(h_last.dtype)
-
+                # logits = F.linear(h_last.double(), self.output.weight.double()).to(h_last.dtype)
+                logits = F.linear(h_last, self.output.weight).to(h_last.dtype)
         return logits, h
 
     @torch.inference_mode()

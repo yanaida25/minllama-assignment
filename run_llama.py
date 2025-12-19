@@ -97,19 +97,21 @@ def model_eval(dataloader, model, device):
 	y_true = []
 	y_pred = []
 	sents = []
-	for step, batch in enumerate(tqdm(dataloader, desc=f'eval', disable=TQDM_DISABLE)):
-		b_ids, b_labels, b_sents = batch['token_ids'], batch['labels'], batch['sents']
 
-		b_ids = b_ids.to(device)
+	with torch.no_grad(): 
+		for step, batch in enumerate(tqdm(dataloader, desc=f'eval', disable=TQDM_DISABLE)):
+			b_ids, b_labels, b_sents = batch['token_ids'], batch['labels'], batch['sents']
 
-		logits = model(b_ids)
-		logits = logits.detach().cpu().numpy()
-		preds = np.argmax(logits, axis=1).flatten()
+			b_ids = b_ids.to(device)
 
-		b_labels = b_labels.flatten()
-		y_true.extend(b_labels)
-		y_pred.extend(preds)
-		sents.extend(b_sents)
+			logits = model(b_ids)
+			logits = logits.detach().cpu().numpy()
+			preds = np.argmax(logits, axis=1).flatten()
+
+			b_labels = b_labels.flatten()
+			y_true.extend(b_labels)
+			y_pred.extend(preds)
+			sents.extend(b_sents)
 
 	f1 = f1_score(y_true, y_pred, average='macro')
 	acc = accuracy_score(y_true, y_pred)
@@ -131,7 +133,17 @@ def save_model(model, optimizer, args, config, filepath):
 	print(f"save the model to {filepath}")
 
 def train(args):
-	device = torch.device('cuda') if args.use_gpu else torch.device('cpu')
+	# device = torch.device('cuda') if args.use_gpu else torch.device('cpu')
+
+	if args.use_gpu:
+			if torch.cuda.is_available():
+				device = torch.device('cuda')
+			elif torch.backends.mps.is_available():
+				device = torch.device('mps')
+			else:
+				device = torch.device('cpu')
+
+
 	#### Load data
 	# create the data and its corresponding datasets and dataloader
 	tokenizer = Tokenizer(args.max_sentence_len)
@@ -198,7 +210,17 @@ def train(args):
 
 def generate_sentence(args, prefix, outfile, max_new_tokens = 75, temperature = 0.0):
 	with torch.no_grad():
-		device = torch.device('cuda') if args.use_gpu else torch.device('cpu')
+		# device = torch.device('cuda') if args.use_gpu else torch.device('cpu')
+		if args.use_gpu:
+				if torch.cuda.is_available():
+					device = torch.device('cuda')
+				elif torch.backends.mps.is_available():
+					device = torch.device('mps')
+				else:
+					device = torch.device('cpu')
+		device_type = "cuda" if "cuda" in str(device) else "cpu" # mpsはautocastの対象外にするのが無難です
+
+
 		ctx = torch.amp.autocast(device_type="cuda", dtype=torch.float32) if args.use_gpu else nullcontext()
 		llama = load_pretrained(args.pretrained_model_path)
 		llama = llama.to(device)
@@ -233,7 +255,15 @@ def test_with_prompting(args):
 
 	with torch.no_grad():
 
-		device = torch.device('cuda') if args.use_gpu else torch.device('cpu')
+		# device = torch.device('cuda') if args.use_gpu else torch.device('cpu')
+		if args.use_gpu:
+				if torch.cuda.is_available():
+					device = torch.device('cuda')
+				elif torch.backends.mps.is_available():
+					device = torch.device('mps')
+				else:
+					device = torch.device('cpu')
+
 		#### Load data
 		# create the data and its corresponding datasets and dataloader
 		tokenizer = Tokenizer(args.max_sentence_len)
@@ -275,7 +305,14 @@ def test(args):
 	assert args.dev_out.endswith("dev-finetuning-output.txt"), 'For saving finetuning results, please set the dev_out argument as "<dataset>-dev-finetuning-output.txt"'
 	assert args.test_out.endswith("test-finetuning-output.txt"), 'For saving finetuning results, please set the test_out argument as "<dataset>-test-finetuning-output.txt"'
 	with torch.no_grad():
-		device = torch.device('cuda') if args.use_gpu else torch.device('cpu')
+		# device = torch.device('cuda') if args.use_gpu else torch.device('cpu')
+		if args.use_gpu:
+				if torch.cuda.is_available():
+					device = torch.device('cuda')
+				elif torch.backends.mps.is_available():
+					device = torch.device('mps')
+				else:
+					device = torch.device('cpu')
 		saved = torch.load(args.filepath)
 		config = saved['model_config']
 		model = LlamaEmbeddingClassifier(config)

@@ -55,18 +55,42 @@ class LlamaEmbeddingClassifier(torch.nn.Module):
 		   logits (unnormalized probabilities) over all classes.
 		3) Take the log-softmax of the logits and return log-probabilities over all classes.
 		'''
-		hidden_states, _ = self.llama(input_ids) # hidden_stateはBSD想定
-		pad_id = self.llama.config.pad_token_id
-		attention_mask = (input_ids != pad_id).int()
+
+		if not isinstance(input_ids, torch.Tensor):
+			input_ids = torch.as_tensor(input_ids) #BS型であるべき
+		# モデル（Llama）と同じデバイス（MPS/CPU）に送る
+		device = next(self.parameters()).device
+		input_ids = input_ids.to(device)
+		if input_ids.dim() == 1:
+			input_ids = input_ids.unsqueeze(0)
+		# print(f"Input IDs : {input_ids.shape}")
+
+		# hidden_states, _ = self.llama(input_ids) # hidden_stateはBSD想定
+
+		logits_voc, hidden_states = self.llama(input_ids)
+		# print('outputはOK！！！！！！')
+		# print('shape of 秘伝 states from Llama:', hidden_states.shape)
+		# pad_id = self.llama.config.pad_token_id
+		pad_id = 3  # stories42M.ptのときのpad_id, ハードコーディングだけどさ
+
+		assert pad_id is not None, "pad_id is None: attention_mask cannot be constructed"
+		# attention_mask = (input_ids != pad_id).int()
+		condition = (input_ids != pad_id)
+		# attention_mask = torch.tensor(condition, dtype=torch.long)
+		attention_mask = condition.clone().detach()
 		sequence_lengths = attention_mask.sum(dim=1) - 1
 
-		batch_indices = torch.arange(input_ids.shape[0], device=input_ids.device)
-
-		
-		final_hidden_state = hidden_states[:, -1, :] #どうやって前処理しました？？
+		batch_size = input_ids.shape[0]
+		batch_indices = torch.arange(batch_size, device=input_ids.device)
+		# final_hidden_state = hidden_states[batch_indices, sequence_lengths, :].to(torch.float32)
+		# print(f"Final hidden state: {final_hidden_state}")
+		# print(f"Final hidden state shape: {final_hidden_state.shape}")
+		final_hidden_state = hidden_states[:, 1, :] #どうやって前処理しました？？
+	
+		# 4) 分類処理
 		dropped_hidden_state = self.dropout(final_hidden_state)
 		logits = self.classifier_head(dropped_hidden_state)
 		log_probabilities = F.log_softmax(logits, dim=-1)
+		
 		return log_probabilities
-	
-		raise NotImplementedError
+		# raise NotImplementedError
